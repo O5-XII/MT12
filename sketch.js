@@ -13,3 +13,9 @@ function setup() {
   pg.torus(15,5);
   describe('grey torus')
 }
+
+function doubleClicked() {
+  if (mouseX > 0 && mouseX < 100 && mouseY > 0 && mouseY < 100) {
+    image(pg, 25,25);
+  }
+}
