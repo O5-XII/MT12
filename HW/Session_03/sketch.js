@@ -10,7 +10,7 @@ function setup() {
 }
 
 function draw() {
-  background(200);
+  background(220);
 
 
 //setting the origin to 0,0 for webgl
@@ -19,15 +19,15 @@ function draw() {
   let mx = mouseX -225;
   let my = mouseY -225;
 
-  let c = color(mx,my,127)
+  let c = color(127,127,127)
   fill(c)
-  noStroke()
-  rect(mx,my,50,50)
+  line(mx,-225,mx,450)
+  line(-225,my,450,my)
 
   textAlign(CENTER);
   textSize(16);
   textFont(font);
-  fill(0);
+  fill(220);
   text(`x: ${mx} y: ${my}`, 0, 0);
 }
 
