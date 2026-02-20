@@ -80,9 +80,9 @@ function draw() {
   text(`HEX+α: ${hexA}`, 40, 65);
 
   textSize(12);
-  text("Wheel: Hue/Sat", 40, 95);
-  text("Right bar: Brightness", 40, 112);
-  text("Bottom bar: Alpha", 40, 129);
+  text("Wheel: Hue/Sat", 290, 95);
+  text("Right bar: Brightness", 280, 112);
+  text("Bottom bar: Alpha", 290, 129);
 
   // marker on wheel
   let mx = cx + cos(radians(h)) * map(s, 0, 100, 0, R);
