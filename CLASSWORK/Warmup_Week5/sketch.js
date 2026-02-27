@@ -1,5 +1,8 @@
 let cX;
 let cY;
+let pcX;
+let pcY;
+let sP = false;
 const cs = 100;
 
 function setup() {
@@ -9,6 +12,11 @@ function setup() {
 
 function draw() {
   background(220);
+  if (sP && pcX !== undefined && pcY !== undefined) {
+    fill(180);
+    circle(pcX, pcY, cs);
+  }
+  fill(255);
   circle(cX, cY, cs);
 }
 
@@ -20,6 +28,14 @@ function mousePressed() {
 }
 
 function relocateCircle() {
+  pcX = cX;
+  pcY = cY;
   cX = random(cs / 2, width - cs / 2);
   cY = random(cs / 2, height - cs / 2);
+}
+
+function keyPressed() {
+  if (key === "b") {
+    sP = !sP;
+  }
 }
