@@ -1,11 +1,20 @@
 let camP;
 let camT;
 let worldUp;
+let VX;
+let VY;
+let yaw;
+let pitch;
 function setup() {
   createCanvas(1000,500,WEBGL);
   camP=createVector(0,0,900)
   camT=createVector(0,0,0)
   worldUp=createVector(0,1,0)
+  VX = width / 2
+  VY = height / 2
+  yaw = 0
+  pitch = 0
+  
 }
 
 function draw() {
@@ -15,19 +24,15 @@ function draw() {
   debugMode(300,10,0,100,0)
   //normalMaterial()
 
-
-
-
-
-  let fwd = p5.Vector.sub(camT, camP).normalize()
+  let dirX = sin(yaw) * cos(pitch);
+  let dirY = sin(pitch);
+  let dirZ = -cos(yaw) * cos(pitch);
+  let fwd = createVector(dirX, dirY, dirZ).normalize()
   let right=p5.Vector.cross(fwd, worldUp).normalize()
   let up = p5.Vector.cross(right, fwd).normalize()
 
   let speed = 5;
   let move=createVector(0,0,0)
-
-  let x = mouseX-200
-  let y = mouseY-200
 
   if(keyIsDown(UP_ARROW)) move.add(p5.Vector.mult(fwd, speed))
   if(keyIsDown(DOWN_ARROW)) move.add(p5.Vector.mult(fwd,-speed))
@@ -39,17 +44,16 @@ function draw() {
     camP.add(move);
     camT.add(move);
 
-    let yaw = map(mouseX, 0, width, -PI / 3, PI / 3);
-    let pitch = map(mouseY, 0, height, -PI / 6, PI / 6);
-
-
-    let dirX = sin(yaw) * cos(pitch);
-    let dirY = sin(pitch);
-    let dirZ = -cos(yaw) * cos(pitch);
+    camT.set(
+      camP.x + dirX * 1000,
+      camP.y + dirY * 1000,
+      camP.z + dirZ * 1000
+    )
 
     camera(
       camP.x, camP.y, camP.z,                
-      dirX*2000,dirY*2000,dirZ*2000             
+      camT.x, camT.y, camT.z,
+      0, 1, 0
     );
 
   
@@ -57,18 +61,19 @@ function draw() {
   //lighting
   ambientLight(100)
 
-  let lX = (mouseX - width / 2) * 2
-  let lY = (mouseY - height / 2) * 2
-
-  spotLight(
-    255, 255, 255,
-    lX, lY, 200,
-    -lX, -lY, -200,
-    50
-  );
   
-  
+  translate(200,0)
   box(200)
+  translate(-400,0,0)
+  box(200)
+}
+
+function mouseMoved() {
+  VX = constrain(VX + movedX, 0, width)
+  VY = constrain(VY + movedY, 0, height)
+  yaw += movedX * 0.003
+  pitch += movedY * 0.003
+  pitch = constrain(pitch, -PI / 2 + 0.01, PI / 2 - 0.01)
 }
 
 function doubleClicked() {
