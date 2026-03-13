@@ -1,18 +1,7 @@
-let camP;
-let camT;
-let worldUp;
-let VX;
-let VY;
-let yaw;
-let pitch;
-let bodyR;
-let bodyH;
-let bodyVY;
-let isGrounded;
-let showInfo;
-let showMenu;
-let debugFont;
-let blocks;
+let camP, camT, worldUp;
+let VX, VY, yaw, pitch;
+let bodyR, bodyH, bodyVY, isGrounded;
+let showInfo, showMenu, debugFont, blocks;
 const MOVE_SPEED = 5;
 const GRAVITY = 0.8;
 const JUMP_VELOCITY = -14;
@@ -24,7 +13,7 @@ function preload() {
 }
 
 function setup() {
-  createCanvas(1000,500,WEBGL);
+  createCanvas(windowWidth,windowHeight, WEBGL);
   camP=createVector(0,-100,900) //spawn position
   camT=createVector(0,0,0)
   worldUp=createVector(0,1,0)
@@ -40,9 +29,11 @@ function setup() {
   showMenu = true
   //map buliding
   blocks = [
-    { pos: createVector(200, 0, 0), size: createVector(200, 200, 200) },
-    { pos: createVector(-200, 0, 0), size: createVector(200, 200, 200) },
-    { pos: createVector(0, 150, 0), size: createVector(600, 100, 2000) }
+    { pos: createVector(-100, 150, 0), size: createVector(200,200,200) },
+    { pos: createVector(-100, 150, -200), size: createVector(200,200,200) },
+    { pos: createVector(100, 150,-200), size: createVector(200,200,200)},
+    { pos: createVector(100, 150, 0), size: createVector(200, 200, 200) },
+    { pos: createVector(0, 150, 600), size: createVector(600, 100, 750) }
   ]
   
 }
@@ -133,7 +124,7 @@ function drawStartButton() {
 
 function drawDebug(lookFwd, right) {
   if (showInfo) {
-    debugMode(300, 10, 0, 100, 0)
+    debugMode(400, 10, 0, 50, -100)
     drawDebugInfo(lookFwd, right)
   } else {
     noDebugMode()
@@ -171,7 +162,7 @@ function mousePressed() {
 
 function keyPressed() {
   if (showMenu) {
-    if (keyCode === ENTER || key === ' ') startGame()
+    if (keyCode === ENTER) startGame()
     return
   }
 
@@ -226,8 +217,8 @@ function drawDebugInfo(lookFwd, right) {
   ]
 
   let panelP = p5.Vector.add(camP, p5.Vector.mult(lookFwd, 260))
-  panelP.add(p5.Vector.mult(right, -90))
-  panelP.y -= 40
+  panelP.add(p5.Vector.mult(right, -200))
+  panelP.y -= 70
   let toCam = p5.Vector.sub(camP, panelP).normalize()
   let panelYaw = atan2(toCam.x, toCam.z)
   let panelPitch = -atan2(toCam.y, sqrt(toCam.x * toCam.x + toCam.z * toCam.z))
