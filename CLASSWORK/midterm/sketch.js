@@ -2,9 +2,13 @@ let camP, camT, worldUp;
 let VX, VY, yaw, pitch;
 let bodyR, bodyH, bodyVY, isGrounded;
 let showInfo, showMenu, debugFont, blocks;
+let gBlkI, nCallT, isOver, loseMsg, score, loseCI, pointCI;
+let queLC, quePC;
+let lastPC;
 const MOVE_SPEED = 5;
 const GRAVITY = 0.8;
 const JUMP_VELOCITY = -14;
+const INTERMISSION_MS = 5000;
 const MENU_CAM = { x: 900, y: -450, z: 1200, tx: 0, ty: 100, tz: 0 };
 const MENU_BTN = { w: 220, h: 60, depth: 0.45 };
 
@@ -27,13 +31,23 @@ function setup() {
   isGrounded = false
   showInfo = false
   showMenu = true
+  gBlkI = -1
+  nCallT = 0
+  isOver = false
+  loseMsg = ''
+  score = 0
+  loseCI = -1
+  pointCI = -1
+  queLC = -1
+  quePC = -1
+  lastPC = -1
   //map buliding
   blocks = [
-    { pos: createVector(-100, 150, 0), size: createVector(200,200,200) },
-    { pos: createVector(-100, 150, -200), size: createVector(200,200,200) },
-    { pos: createVector(100, 150,-200), size: createVector(200,200,200)},
-    { pos: createVector(100, 150, 0), size: createVector(200, 200, 200) },
-    { pos: createVector(0, 150, 600), size: createVector(600, 100, 750) }
+    { pos: createVector(-100, 150, 0), size: createVector(200,200,200), color: [230, 80, 80], challenge: true, label: 'RED' },
+    { pos: createVector(-100, 150, -200), size: createVector(200,200,200), color: [80, 120, 230], challenge: true, label: 'BLUE' },
+    { pos: createVector(100, 150,-200), size: createVector(200,200,200), color: [80, 210, 120], challenge: true, label: 'GREEN' },
+    { pos: createVector(100, 150, 0), size: createVector(200, 200, 200), color: [240, 220, 70], challenge: true, label: 'YELLOW' },
+    { pos: createVector(0, 150, 600), size: createVector(600, 100, 750), color: [180, 180, 180], challenge: false, label: '' }
   ]
   
 }
@@ -49,7 +63,10 @@ function draw() {
   let right=createVector(cos(yaw),0,sin(yaw)).normalize();
   let move = getMoveInput(moveFwd, right)
 
-  if (!showMenu) movePlayer(move);
+  if (!showMenu && !isOver) {
+    movePlayer(move);
+    updateRoundState()
+  }
 
   camT.set(
     camP.x + lookFwd.x * 1000,
@@ -60,6 +77,7 @@ function draw() {
   setActiveCamera()
   drawWorld()
   drawMenu()
+  drawHUD(lookFwd, right)
   drawDebug(lookFwd, right)
 }
 
@@ -84,6 +102,8 @@ function drawWorld() {
   for (let block of blocks) {
     push()
     translate(block.pos.x, block.pos.y, block.pos.z)
+    noStroke()
+    fill(block.color[0], block.color[1], block.color[2])
     box(block.size.x, block.size.y, block.size.z)
     pop()
   }
@@ -114,9 +134,12 @@ function drawStartButton() {
   noFill()
   rect(0, 0, MENU_BTN.w, MENU_BTN.h, 18)
   noStroke()
-  fill(255)
   textFont(debugFont)
   textAlign(CENTER, CENTER)
+  fill(0)
+  textSize(34)
+  text('guess the colors', 0, -70)
+  fill(255)
   textSize(22)
   text('PRESS ENTER', 0, 2)
   pop()
@@ -166,6 +189,11 @@ function keyPressed() {
     return
   }
 
+  if (isOver) {
+    if (key ==='r') resetGame()
+    return
+  }
+
   if (keyCode === 32 && isGrounded) {
     bodyVY = JUMP_VELOCITY
     isGrounded = false
@@ -176,7 +204,27 @@ function keyPressed() {
 
 function startGame() {
   showMenu = false
+  resetGame()
   requestPointerLock()
+}
+
+function resetGame() {
+  camP.set(0, -100, 900)
+  camT.set(0, 0, 0)
+  bodyVY = 0
+  isGrounded = false
+  gBlkI = -1
+  nCallT = 0
+  isOver = false
+  loseMsg = ''
+  score = 0
+  loseCI = -1
+  pointCI = -1
+  queLC = -1
+  quePC = -1
+  lastPC = -1
+  queueNextColorCall()
+  nextColorCall()
 }
 
 function overStartButton() {
@@ -197,12 +245,15 @@ function getMenuButtonPosition() {
 
 // debug
 function toggleDebug() {
-  if (key === 'i' || key === 'I') {
+  if (key === 'I') {
     showInfo = !showInfo
   }
 }
 
 function drawDebugInfo(lookFwd, right) {
+  let upcomingLose = queLC >= 0 ? blocks[queLC].label : 'NONE'
+  let upcomingPoint = quePC >= 0 ? blocks[quePC].label : 'NONE'
+  let nextIn = max(0, ceil((nCallT - millis()) / 1000))
   
   let info = [
     `camP: ${nf(camP.x, 1, 1)}, ${nf(camP.y, 1, 1)}, ${nf(camP.z, 1, 1)}`,
@@ -213,6 +264,12 @@ function drawDebugInfo(lookFwd, right) {
     `bodyH: ${bodyH}`,
     `bodyVY: ${nf(bodyVY, 1, 2)}`,
     `grounded: ${isGrounded}`,
+    `grounded block: ${gBlkI}`,
+    `lose color index: ${loseCI}`,
+    `point color index: ${pointCI}`,
+    `upcoming lose: ${upcomingLose}`,
+    `upcoming point: ${upcomingPoint}`,
+    `next call in: ${nextIn}s`,
     `blocks: ${blocks.length}`
   ]
 
@@ -245,6 +302,7 @@ function movePlayer(move) {
   HorizCollisions()
 
   isGrounded = false
+  gBlkI = -1
   bodyVY += GRAVITY
   camP.y += bodyVY
   VertCollisions()
@@ -292,7 +350,8 @@ function HorizCollisions() {
 }
 
 function VertCollisions() {
-  for (let block of blocks) {
+  for (let i = 0; i < blocks.length; i++) {
+    let block = blocks[i]
     let minX = block.pos.x - block.size.x / 2
     let maxX = block.pos.x + block.size.x / 2
     let minY = block.pos.y - block.size.y / 2
@@ -319,6 +378,7 @@ function VertCollisions() {
       camP.y = minY - bodyH
       bodyVY = 0
       isGrounded = true
+      gBlkI = i
     } else if (bodyVY < 0 && bottom > maxY && overlapBottom < overlapTop) {
       camP.y = maxY
       bodyVY = 0
@@ -326,9 +386,109 @@ function VertCollisions() {
       camP.y = minY - bodyH
       bodyVY = 0
       isGrounded = true
+      gBlkI = i
     } else {
       camP.y = maxY
       bodyVY = 0
     }
   }
+}
+
+function startRound() {
+  // Kept for compatibility; game now uses nextColorCall().
+  nextColorCall()
+}
+
+function updateRoundState() {
+  if (camP.y > 1000) {
+    setGameOver('You fell off.')
+    return
+  }
+
+  if (millis() >= nCallT) {
+    nextColorCall()
+  }
+}
+
+function setGameOver(reason) {
+  isOver = true
+  loseMsg = reason
+  exitPointerLock()
+}
+
+function nextColorCall() {
+  if (queLC < 0 || quePC < 0) {
+    queueNextColorCall()
+  }
+
+  loseCI = queLC
+  pointCI = quePC
+  lastPC = pointCI
+  queueNextColorCall()
+
+  // No pick-time window: result is evaluated exactly when the call happens.
+  if (gBlkI === loseCI) {
+    setGameOver(`Called ${blocks[loseCI].label}. You lose.`)
+    return
+  }
+
+  if (gBlkI >= 0 && gBlkI <= 3) {
+    if (gBlkI === pointCI) {
+      score += 4
+    } else {
+      score += 1
+    }
+  }
+
+  nCallT = millis() + INTERMISSION_MS
+}
+
+function queueNextColorCall() {
+  queLC = floor(random(4))
+  quePC = floor(random(4))
+  while (quePC === queLC || quePC === lastPC) {
+    quePC = floor(random(4))
+  }
+}
+
+function drawHUD(lookFwd, right) {
+  if (showMenu) return
+
+  push()
+  let panelP = p5.Vector.add(camP, p5.Vector.mult(lookFwd, 260))
+  panelP.add(p5.Vector.mult(right, 190))
+  panelP.y -= 60
+  let toCam = p5.Vector.sub(camP, panelP).normalize()
+  let panelYaw = atan2(toCam.x, toCam.z)
+  let panelPitch = -atan2(toCam.y, sqrt(toCam.x * toCam.x + toCam.z * toCam.z))
+
+  translate(panelP.x, panelP.y, panelP.z)
+  rotateY(panelYaw)
+  rotateX(panelPitch)
+  scale(0.7, 0.7, 0.7)
+  noLights()
+
+  textFont(debugFont)
+  fill(0)
+  textAlign(LEFT, TOP)
+  textSize(18)
+
+  if (!isOver) {
+    let timeLeft = max(0, ceil((nCallT - millis()) / 1000))
+    fill(0)
+    text(`Lose Color: ${blocks[loseCI].label}`, 0, 0)
+    text(`Point Color: ${blocks[pointCI].label}`, 0, 28)
+    text(`Next Call In: ${timeLeft}s`, 0, 56)
+    text(`Score: ${score}`, 0, 84)
+  } else {
+    fill(0)
+    textSize(32)
+    text(`You Lose`, 0, 0)
+    textSize(18)
+    text(`${loseMsg}`, 0, 36)
+    text(`Final Score: ${score}`, 0, 64)
+    text(`Press R to restart`, 0, 92)
+  }
+
+  pop()
 }
