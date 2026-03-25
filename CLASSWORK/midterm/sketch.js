@@ -1,11 +1,14 @@
-let camP, camT, worldUp;
-let VX, VY, yaw, pitch;
-let bodyR, bodyH, bodyVY, isGrounded;
-let showInfo, showMenu, debugFont, blocks;
-let gBlkI, nCallT, isOver, loseMsg, score, loseCI, pointCI;
-let queLC, quePC;
-let lastPC;
-const MOVE_SPEED = 5;
+/* Miles Larkins -- Random Color guessing game, use wasd to avoid the losing color, if you're lucky you might get the bonus one. */
+
+let camP, camT, worldUp; //camera
+let VX, VY, yaw, pitch; //velocity
+let bodyR, bodyH, bodyVY, isGrounded; //body physics
+let showInfo, showMenu, debugFont, blocks; //menus
+let gBlkI, nCallT, isOver, loseMsg, score, loseCI, pointCI; //states
+let queLC, quePC; //debuging/rng que 
+let lastPC; //percived rng 
+// Boku no meirei wa zettaida
+const MOVE_SPEED = 5; 
 const GRAVITY = 0.8;
 const JUMP_VELOCITY = -14;
 const INTERMISSION_MS = 5000;
@@ -120,7 +123,7 @@ function drawStartButton() {
   let toMenuCam = p5.Vector.sub(menuCamP, buttonP).normalize()
   let buttonYaw = atan2(toMenuCam.x, toMenuCam.z)
   let buttonPitch = -atan2(toMenuCam.y, sqrt(toMenuCam.x * toMenuCam.x + toMenuCam.z * toMenuCam.z))
-
+//menu designing 
   push()
   translate(buttonP.x, buttonP.y, buttonP.z)
   rotateY(buttonYaw)
@@ -207,7 +210,7 @@ function startGame() {
   resetGame()
   requestPointerLock()
 }
-
+// resetting text
 function resetGame() {
   camP.set(0, -100, 900)
   camT.set(0, 0, 0)
@@ -243,7 +246,7 @@ function getMenuButtonPosition() {
   return p5.Vector.lerp(menuCamT, menuCamP, MENU_BTN.depth)
 }
 
-// debug
+// actual debug toggle 
 function toggleDebug() {
   if (key === 'I') {
     showInfo = !showInfo
@@ -294,7 +297,7 @@ function drawDebugInfo(lookFwd, right) {
   pop()
 }
 
-// movement + collisions
+// collisions
 function movePlayer(move) {
   camP.x += move.x
   HorizCollisions()
@@ -395,7 +398,7 @@ function VertCollisions() {
 }
 
 function startRound() {
-  // Kept for compatibility; game now uses nextColorCall().
+  // remeber this lowk
   nextColorCall()
 }
 
@@ -426,7 +429,6 @@ function nextColorCall() {
   lastPC = pointCI
   queueNextColorCall()
 
-  // No pick-time window: result is evaluated exactly when the call happens.
   if (gBlkI === loseCI) {
     setGameOver(`Called ${blocks[loseCI].label}. You lose.`)
     return
