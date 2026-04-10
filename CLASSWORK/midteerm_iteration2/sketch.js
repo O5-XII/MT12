@@ -4,7 +4,7 @@ let camP, camT, worldUp; //camera
 let VX, VY, yaw, pitch; //velocity
 let bodyR, bodyH, bodyVY, isGrounded; //body physics
 let showInfo, showMenu, debugFont, blocks; //menus
-let gBlkI, nCallT, isOver, loseMsg, score, loseCI, pointCI; //states
+let gBlkI, nCallT, isOver, loseMsg, score, loseCI, pointCI, loseHideUntil; //states
 let queLC, quePC; //debuging/rng que 
 let lastPC; //percived rng 
 // Boku no meirei wa zettaida
@@ -12,6 +12,7 @@ const MOVE_SPEED = 5;
 const GRAVITY = 0.8;
 const JUMP_VELOCITY = -14;
 const INTERMISSION_MS = 5000;
+const LOSE_BLOCK_HIDE_MS = 3000;
 const CANVAS_SIZE = { w: 1920, h: 1080 };
 const MENU_CAM = { x: 900, y: -450, z: 1200, tx: 0, ty: 100, tz: 0 };
 const MENU_BTN = { w: 220, h: 60, depth: 0.45 };
@@ -46,6 +47,7 @@ function setup() {
   score = 0
   loseCI = -1
   pointCI = -1
+  loseHideUntil = 0
   queLC = -1
   quePC = -1
   lastPC = -1
@@ -108,7 +110,9 @@ function drawWorld() {
   cylinder(bodyR, bodyH)
   pop()
 
-  for (let block of blocks) {
+  for (let i = 0; i < blocks.length; i++) {
+    if (isBlockHidden(i)) continue
+    let block = blocks[i]
     push()
     translate(block.pos.x, block.pos.y, block.pos.z)
     noStroke()
@@ -229,6 +233,7 @@ function resetGame() {
   score = 0
   loseCI = -1
   pointCI = -1
+  loseHideUntil = 0
   queLC = -1
   quePC = -1
   lastPC = -1
@@ -316,8 +321,15 @@ function movePlayer(move) {
   camP.y += bodyVY
   VertCollisions()
 }
+
+function isBlockHidden(blockI) {
+  return blockI >= 0 && blockI <= 3 && blockI === loseCI && millis() < loseHideUntil
+}
+
 function HorizCollisions() {
-  for (let block of blocks) {
+  for (let i = 0; i < blocks.length; i++) {
+    if (isBlockHidden(i)) continue
+    let block = blocks[i]
     let minX = block.pos.x - block.size.x / 2
     let maxX = block.pos.x + block.size.x / 2
     let minY = block.pos.y - block.size.y / 2
@@ -360,6 +372,7 @@ function HorizCollisions() {
 
 function VertCollisions() {
   for (let i = 0; i < blocks.length; i++) {
+    if (isBlockHidden(i)) continue
     let block = blocks[i]
     let minX = block.pos.x - block.size.x / 2
     let maxX = block.pos.x + block.size.x / 2
@@ -432,6 +445,7 @@ function nextColorCall() {
 
   loseCI = queLC
   pointCI = quePC
+  loseHideUntil = millis() + LOSE_BLOCK_HIDE_MS
   lastPC = pointCI
   queueNextColorCall()
 
