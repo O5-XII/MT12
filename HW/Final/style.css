@@ -5,4 +5,36 @@ html, body {
 
 canvas {
   display: block;
+  cursor: none;
+}
+
+#crosshair {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+}
+
+.crosshair-line {
+  position: absolute;
+  background: rgb(245, 255, 255);
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+}
+
+.crosshair-horizontal {
+  left: 1px;
+  top: 11px;
+  width: 22px;
+  height: 2px;
+}
+
+.crosshair-vertical {
+  left: 11px;
+  top: 1px;
+  width: 2px;
+  height: 22px;
 }

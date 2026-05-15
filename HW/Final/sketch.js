@@ -2,16 +2,21 @@ let cnv;
 let camP, camT;
 let yaw, pitch;
 let bodyH, bodyVY, isGrounded;
-let blocks;
+let blocks, spheres;
+let gameStarted;
 
 const MOVE_SPEED = 5;
 const MOUSE_SENSITIVITY = 0.003;
 const GRAVITY = 0.8;
+const TARGET_RADIUS = 50;
+const TARGET_LIFETIME = 2500;
+const TARGET_RESPAWN_DELAY = 350;
 const grey1 = [180, 180, 180];
 const blue1 = [127,255,212];
 
 function setup() {
   cnv = createCanvas(windowWidth, windowHeight, WEBGL);
+  createCrosshair();
   shininess(255)
   specularMaterial(19,25,19)
   camP = createVector(0, -100, 650);
@@ -21,16 +26,15 @@ function setup() {
   bodyH = 140;
   bodyVY = 0;
   isGrounded = false;
+  gameStarted = false;
 
   blocks = [
     {pos: createVector(0, 150, 650), size: createVector(600, 100, 600), color: grey1 },
-    {pos: createVector(0,-250,0), size: createVector(900,700,10), color: grey1 }
+    {pos: createVector(0,-250,0), size: createVector(900,700,10), color: grey1, isFrame: true } //frame
   ];
-  spheres = [
-    {pos: createVector(0,0,0), radius: 50, color: blue1},
-    {pos: createVector(240, -253,0), radius: 50, color: blue1},
-    {pos: createVector(-225,-40, 0), radius: 50, color: blue1}
-  ]
+
+  spheres = [createTarget()];
+  spawnStartTarget(spheres[0]);
 }
 
 function draw() {
@@ -43,7 +47,15 @@ function draw() {
   ambientLight(80);
   directionalLight(255, 255, 255, -0.5, 0.75, -1);
 
+  updateTargets();
   drawWorld();
+}
+
+function createCrosshair() {
+  let crosshair = document.createElement('div');
+  crosshair.id = 'crosshair';
+  crosshair.innerHTML = '<span class="crosshair-line crosshair-horizontal"></span><span class="crosshair-line crosshair-vertical"></span>';
+  document.body.appendChild(crosshair);
 }
 
 function drawWorld(){
@@ -64,6 +76,8 @@ function drawWBlocks() {
 
 function drawSpheres() {
   for (let ball of spheres) {
+    if (!ball.active) continue;
+
     push();
     translate(ball.pos.x, ball.pos.y, ball.pos.z);
     noStroke();
@@ -72,6 +86,77 @@ function drawSpheres() {
     pop();
   }
 }
+
+function createTarget() {
+  let target = {
+    pos: createVector(0, 0, 0),
+    radius: TARGET_RADIUS,
+    color: blue1,
+    active: false,
+    visibleUntil: 0,
+    respawnAt: 0
+  };
+
+  return target;
+}
+
+function updateTargets() {
+  if (!gameStarted) return;
+
+  let now = millis();
+
+  for (let target of spheres) {
+    if (target.active && now > target.visibleUntil) {
+      hideTarget(target);
+    }
+
+    if (!target.active && now > target.respawnAt) {
+      spawnTarget(target);
+    }
+  }
+}
+
+function spawnTarget(target, startsTimer = true) {
+  target.pos = getTargetSpawnPosition(target.radius);
+  target.active = true;
+  target.visibleUntil = startsTimer ? millis() + TARGET_LIFETIME : Infinity;
+}
+
+function spawnStartTarget(target) {
+  target.pos = getStartTargetPosition(target.radius);
+  target.active = true;
+  target.visibleUntil = Infinity;
+}
+
+function hideTarget(target) {
+  target.active = false;
+  target.respawnAt = millis() + TARGET_RESPAWN_DELAY;
+}
+
+function getTargetSpawnPosition(radius) {
+  let frame = getFrameBlock();
+  let minX = frame.pos.x - frame.size.x / 2 + radius;
+  let maxX = frame.pos.x + frame.size.x / 2 - radius;
+  let minY = frame.pos.y - frame.size.y / 2 + radius;
+  let maxY = frame.pos.y + frame.size.y / 2 - radius;
+  let z = frame.pos.z + frame.size.z / 2 + radius;
+
+  return createVector(random(minX, maxX), random(minY, maxY), z);
+}
+
+function getStartTargetPosition(radius) {
+  let frame = getFrameBlock();
+  let floor = blocks[0];
+  let startY = floor.pos.y - floor.size.y / 2 - bodyH;
+  let z = frame.pos.z + frame.size.z / 2 + radius;
+
+  return createVector(camP.x, startY, z);
+}
+
+function getFrameBlock() {
+  return blocks.find(block => block.isFrame);
+}
+
 function movePlayerCamera() {
   let moveFwd = createVector(sin(yaw), 0, -cos(yaw)).normalize();
   let right = createVector(cos(yaw), 0, sin(yaw)).normalize();
@@ -117,19 +202,54 @@ function checkFloorCollision() {
 }
 
 function updateCameraTarget() {
-  let dirX = sin(yaw) * cos(pitch);
-  let dirY = sin(pitch);
-  let dirZ = -cos(yaw) * cos(pitch);
+  let lookDirection = getLookDirection();
 
   camT.set(
-    camP.x + dirX * 1000,
-    camP.y + dirY * 1000,
-    camP.z + dirZ * 1000
+    camP.x + lookDirection.x * 1000,
+    camP.y + lookDirection.y * 1000,
+    camP.z + lookDirection.z * 1000
   );
+}
+
+function getLookDirection() {
+  return createVector(
+    sin(yaw) * cos(pitch),
+    sin(pitch),
+    -cos(yaw) * cos(pitch)
+  ).normalize();
 }
 
 function mousePressed() {
   requestPointerLock();
+  checkTargetClick();
+}
+
+function checkTargetClick() {
+  let direction = getLookDirection();
+  let closestHit = null;
+  let closestDistance = Infinity;
+
+  for (let target of spheres) {
+    if (!target.active) continue;
+
+    let toTarget = target.pos.copy().sub(camP);
+    let distanceForward = toTarget.dot(direction);
+    let distanceFromRaySq = toTarget.dot(toTarget) - distanceForward * distanceForward;
+
+    if (
+      distanceForward > 0 &&
+      distanceFromRaySq <= target.radius * target.radius &&
+      distanceForward < closestDistance
+    ) {
+      closestHit = target;
+      closestDistance = distanceForward;
+    }
+  }
+
+  if (closestHit) {
+    gameStarted = true;
+    spawnTarget(closestHit);
+  }
 }
 
 function mouseMoved() {
