@@ -70,7 +70,7 @@ function setup() {
     {pos: createVector(0,-250,0), size: createVector(900,700,12), color: wallGrey, isFrame: true } //frame
   ];
 
-  spheres = [createTarget()];
+  spheres = [new Target()];
   updateHud();
   updateEndScreen(false);
   setUIVisibility();
@@ -521,19 +521,17 @@ function drawTargetRing(ball) {
   pop();
 }
 
-function createTarget() {
-  let target = {
-    pos: createVector(0, 0, 0),
-    radius: targetRadius || DEFAULT_TARGET_RADIUS,
-    color: blue1,
-    active: false,
-    visibleUntil: 0,
-    respawnAt: 0,
-    spawnedAt: 0,
-    gridIndex: -1
-  };
-
-  return target;
+class Target {
+  constructor() {
+    this.pos = createVector(0, 0, 0);
+    this.radius = targetRadius || DEFAULT_TARGET_RADIUS;
+    this.color = blue1;
+    this.active = false;
+    this.visibleUntil = 0;
+    this.respawnAt = 0;
+    this.spawnedAt = 0;
+    this.gridIndex = -1;
+  }
 }
 
 function updateTargets() {
@@ -604,7 +602,7 @@ function setupTargetsForMode() {
 
 function ensureTargetCount(count) {
   while (spheres.length < count) {
-    spheres.push(createTarget());
+    spheres.push(new Target());
   }
 }
 
